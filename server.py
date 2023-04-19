@@ -5,7 +5,7 @@ from flask import Flask, jsonify
 from flask import request as flaskRequest
 from csv import writer
 from flask import render_template
-import mysql.connector
+# import mysql.connector
 import RPi.GPIO as GPIO
 import time
 import numpy as np
