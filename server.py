@@ -85,11 +85,13 @@ def loop():
             
             global threshold
             if(dist<threshold):
-                GPIO.output(11, GPIO.LOW)
-                GPIO.output(12, GPIO.HIGH)
+                return True
+                # GPIO.output(11, GPIO.LOW)
+                # GPIO.output(12, GPIO.HIGH)
             else:
-                GPIO.output(11, GPIO.HIGH)
-                GPIO.output(12, GPIO.LOW)
+                return False
+                # GPIO.output(11, GPIO.HIGH)
+                # GPIO.output(12, GPIO.LOW)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -106,7 +108,9 @@ def checkAlarm(audio):
     # return
 
     # If correct:
-    madeCofee = makeCoffee()
+    madeCoffee = makeCoffee()
+
+    print("\nMade Coffee? ", madeCoffee)
 
     # If not madeCoffee:
     # return
@@ -124,15 +128,15 @@ def makeCoffee():
     # Wait until set time
 
     # Second, check ultrasound sensor for cup
-    loop()
-    # If not cup:
-    # return false
-
-    # If cup:
-    # Activate actuator to press button
-    # return true
-
-    return
+    cup = loop()
+    if not cup:
+        print("\nCup not available\n")
+        return False
+    else:
+        print("\nCup available, will make coffee now\n")
+        GPIO.output(11, GPIO.LOW)
+        GPIO.output(12, GPIO.HIGH)
+        return True
 
 def timeToTakeCoffee():
     return
