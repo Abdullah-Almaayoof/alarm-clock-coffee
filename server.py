@@ -137,7 +137,7 @@ def makeCoffee():
         return False
     else:
         print("\nCup available, will make coffee now\n")
-        while timeElapsed <= 5:
+        while timeElapsed <= 10:
             time.sleep(0.1)
             timeElapsed = timeElapsed+0.1
 
