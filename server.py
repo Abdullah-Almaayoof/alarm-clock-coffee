@@ -138,9 +138,12 @@ def makeCoffee():
     else:
         print("\nCup available, will make coffee now\n")
         while timeElapsed <= 5:
+            time.sleep(0.1)
+            timeElapsed = timeElapsed+0.1
+
             GPIO.output(11, GPIO.LOW)
             GPIO.output(12, GPIO.HIGH)
-            sleep(1)
+            # sleep(1)
             GPIO.output(11, GPIO.HIGH)
             GPIO.output(12, GPIO.LOW)
 
