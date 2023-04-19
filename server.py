@@ -8,6 +8,7 @@ from flask import render_template
 # import mysql.connector
 import RPi.GPIO as GPIO
 import time
+from time import sleep
 import numpy as np
 
 
@@ -123,6 +124,8 @@ def checkAlarm(audio):
 
 
 def makeCoffee():
+    global timeElapsed, T, D
+
     setup()
     # First, check how long we should wait until making the coffee
     # Wait until set time
@@ -134,8 +137,13 @@ def makeCoffee():
         return False
     else:
         print("\nCup available, will make coffee now\n")
-        GPIO.output(11, GPIO.LOW)
-        GPIO.output(12, GPIO.HIGH)
+        while timeElapsed <= 5:
+            GPIO.output(11, GPIO.LOW)
+            GPIO.output(12, GPIO.HIGH)
+            sleep(1)
+            GPIO.output(11, GPIO.HIGH)
+            GPIO.output(12, GPIO.LOW)
+
         return True
 
 def timeToTakeCoffee():
