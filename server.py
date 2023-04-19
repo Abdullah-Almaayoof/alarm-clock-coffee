@@ -19,7 +19,7 @@ app = Flask('app')
 TRIG = 16 #Ultrasound projector
 ECHO = 15 #Ultrasound Receiver
 solenoid = 12 #solenoid
-# GreenLED = 11 #Green LED
+GreenLED = 11 #Green LED
 
 # INTIALIZE VARIABLES =================================================
 
@@ -37,7 +37,7 @@ def setup():
     GPIO.setup(TRIG, GPIO.OUT)
     GPIO.setup(ECHO, GPIO.IN)
     GPIO.setup(solenoid, GPIO.OUT)
-    # GPIO.setup(GreenLED, GPIO.OUT)
+    GPIO.setup(GreenLED, GPIO.OUT)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Function given by SunFounder to calculate distance from sensor
