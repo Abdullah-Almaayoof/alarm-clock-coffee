@@ -229,7 +229,7 @@ def RunMotor():
     requests.get('http://kartik236.seas.gwu.edu:8080/Start')
 
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
 #     RunMotor()
     # makeCoffeeStream()
-    initAlarmCSV()
+    # initAlarmCSV()

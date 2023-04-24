@@ -15,6 +15,10 @@ import alarm as alarm
 
 app = Flask('app')
 
+@app.route('/test', methods=['GET'])
+def test():
+    return 'test'
+
 @app.route('/recieveAudio', methods=['GET', 'POST'])
 def upload():
     if flaskRequest.method == 'POST':
@@ -27,9 +31,14 @@ def upload():
             file.save('stream.wav')
             
             #return send_from_directory('output', output_file)
-            return alarm.checkAlarmSegment('stream.wav')
+            if alarm.checkAlarmSegment('stream.wav'):
+                print('returning True')
+                return 'True'
+            else:
+                print('returning False')
+                return 'False'
         else:
-            return False
+            return 'No file'
 
     return 'Not Post'
 
