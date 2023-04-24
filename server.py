@@ -6,155 +6,32 @@ from flask import request as flaskRequest
 from csv import writer
 from flask import render_template
 # import mysql.connector
-import RPi.GPIO as GPIO
 import time
 from time import sleep
 import numpy as np
+import os
+import alarm as alarm
 
 
 app = Flask('app')
 
-# INTIALIZE GPIO-PINS =================================================
-# Declare the channels for each device
-
-TRIG = 16 #Ultrasound projector
-ECHO = 15 #Ultrasound Receiver
-solenoid = 12 #solenoid
-GreenLED = 11 #Green LED
-
-# INTIALIZE VARIABLES =================================================
-
-timeElapsed = 0
-threshold = 25 # distance in centimeters
-T = np.array([])
-D = np.array([])
-
-# DEFINE FUNCTIONS ====================================================
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Set up GPIO mode and define input and output pins
-
-def setup():
-    GPIO.setmode(GPIO.BOARD)
-    GPIO.setup(TRIG, GPIO.OUT)
-    GPIO.setup(ECHO, GPIO.IN)
-    GPIO.setup(solenoid, GPIO.OUT)
-    GPIO.setup(GreenLED, GPIO.OUT)
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Function given by SunFounder to calculate distance from sensor
-
-def distance():
-    GPIO.output(TRIG, 0)
-    time.sleep(0.000002)
-    GPIO.output(TRIG, 1)
-    time.sleep(0.00001)
-    GPIO.output(TRIG, 0)
-
-    
-    while GPIO.input(ECHO) == 0:
-        time1 = time.time()
-        
-    while GPIO.input(ECHO) == 1:
-        time2 = time.time()
-
-    during = time2 - time1
-    return during * 340 / 2 * 100 #Returns distance in cm
-
-
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~                
-# WRITE DATA TO ARRAYS, PRINT DATA ON TERMINAL for 10 seconds
-
-def loop():
-
-
-        global timeElapsed, T, D
-        
-        while timeElapsed <= 10:
-            # writes the time elapsed and distance measured
-            # Turns LED to RED if object within 'threshold' distance
-            dist = distance()
-
-            print(timeElapsed, 's', dist, 'cm')
-            print('')
-
-            time.sleep(0.1)
-            timeElapsed = timeElapsed+0.1
+@app.route('/recieveAudio', methods=['GET', 'POST'])
+def upload():
+    if flaskRequest.method == 'POST':
+        file = flaskRequest.files['file']
+        if file:
+            filename = 'stream.wav'
+            print(filename)
+            new_filename = f'{filename.split(".")[0]}.wav'
+            save_location = os.path.join('input', new_filename)
+            file.save('stream.wav')
             
-            D = np.append(D, dist)
-            T = np.append(T, timeElapsed)
-            
-            global threshold
-            if(dist<threshold):
-                return True
-                # GPIO.output(11, GPIO.LOW)
-                # GPIO.output(12, GPIO.HIGH)
-            else:
-                return False
-                # GPIO.output(11, GPIO.HIGH)
-                # GPIO.output(12, GPIO.LOW)
+            #return send_from_directory('output', output_file)
+            return alarm.checkAlarmSegment('stream.wav')
+        else:
+            return False
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-
-@app.route('/checkAlarm', methods=['POST'])
-def checkAlarm(audio):
-    data = flaskRequest.get_json()
-    print(data)
-
-
-    # Check if correct ringtone (forrier transform)
-    # If not correct:
-    # return
-
-    # If correct:
-    madeCoffee = makeCoffee()
-
-    print("\nMade Coffee? ", madeCoffee)
-
-    # If not madeCoffee:
-    # return
-
-    # If madeCoffee:
-    timeToTakeCoffee()
-
-    return ""
-
-
-
-def makeCoffee():
-    global timeElapsed, T, D
-
-    setup()
-    # First, check how long we should wait until making the coffee
-    # Wait until set time
-
-    # Second, check ultrasound sensor for cup
-    cup = loop()
-    if not cup:
-        print("\nCup not available\n")
-        return False
-    else:
-        print("\nCup available, will make coffee now\n")
-        while timeElapsed <= 1:
-            time.sleep(0.1)
-            timeElapsed = timeElapsed+0.1
-
-            GPIO.output(11, GPIO.LOW)
-            GPIO.output(12, GPIO.HIGH)
-            sleep(1)
-            GPIO.output(11, GPIO.HIGH)
-            GPIO.output(12, GPIO.LOW)
-
-        return True
-
-def timeToTakeCoffee():
-    return
-
-
-makeCoffee()
-
+    return 'Not Post'
 
 
 
