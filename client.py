@@ -10,11 +10,15 @@ import math
 import wave
 import os
 import struct
-import matplotlib.pyplot as plt
-from scipy.io.wavfile import write
+#import matplotlib.pyplot as plt
+#from scipy.io.wavfile import write
+#import soundfile as sf
 import soundfile as sf
+import simpleaudio
 import pyaudio
 import requests
+
+count = 0
 
 def recordAudio():
     chunk = 1024  # Record in chunks of 1024 samples
@@ -22,6 +26,7 @@ def recordAudio():
     channels = 1
     fs = 44100  # Record at 44100 samples per second
     seconds = 30
+    global count
     filename = "stream.wav"
 
     p = pyaudio.PyAudio()  # Create an interface to PortAudio
@@ -38,7 +43,7 @@ def recordAudio():
 
     # Store data in chunks for 3 seconds
     for i in range(0, int(fs / chunk * seconds)):
-        data = stream.read(chunk)
+        data = stream.read(chunk, exception_on_overflow = False)
         frames.append(data)
 
     # Stop and close the stream 
@@ -58,11 +63,12 @@ def recordAudio():
     wf.close()
 
 
+
 # INTIALIZE GPIO-PINS =================================================
 # Declare the channels for each device
 
 TRIG = 16 #Ultrasound projector
-ECHO = 15 #Ultrasound Receiver
+ECHO = 20 #Ultrasound Receiver
 solenoid = 12 #solenoid
 GreenLED = 11 #Green LED
 
@@ -78,7 +84,7 @@ D = np.array([])
 # Set up GPIO mode and define input and output pins
 
 def setup():
-    GPIO.setmode(GPIO.BOARD)
+    GPIO.setmode(GPIO.BCM)
     GPIO.setup(TRIG, GPIO.OUT)
     GPIO.setup(ECHO, GPIO.IN)
     GPIO.setup(solenoid, GPIO.OUT)
@@ -163,14 +169,31 @@ def loop():
 
 #     return ""
 
+
 def sendAudioLoop():
-    response = False
-    while response == False:
-        recordAudio()
-        #Extract data and sampling rate from file
-        url = 'http://127.0.0.1:8080/recieveAudio'
+    run = False
+    print('running client')
+    runCount = 0
+    global count
+    lastResult = 'False'
+    while run == False:
+        url = 'http://128.164.208.163:8080/recieveAudio'
         file = {'file': open(r'stream.wav', 'rb')}
-        response = requests.post(url, files=file)
+        try:
+            requests.post(url, files=file, timeout=1)
+        except:
+            url = 'http://128.164.208.163:8080/getRunCount'
+            currentCount = requests.get(url).content
+            print(currentCount.decode('UTF-8'))
+            url = 'http://128.164.208.163:8080/getLastRun'
+            lastResult = requests.get(url).content
+            print(lastResult.decode('UTF-8'))
+            if 'True' in lastResult.decode('UTF-8'):
+                run = True
+            recordAudio()
+        count+=1
+        
+        
     print('ALARM DETECTED')
     makeCoffee()
     return
@@ -190,24 +213,50 @@ def makeCoffee():
         return False
     else:
         print("\nCup available, will make coffee now\n")
-        while timeElapsed <= 1:
-            time.sleep(0.1)
-            timeElapsed = timeElapsed+0.1
-
-            GPIO.output(11, GPIO.LOW)
-            GPIO.output(12, GPIO.HIGH)
-            sleep(1)
-            GPIO.output(11, GPIO.HIGH)
-            GPIO.output(12, GPIO.LOW)
+#        while timeElapsed <= 1:
+#            time.sleep(0.1)
+#            timeElapsed = timeElapsed+0.1
+#
+#            GPIO.output(11, GPIO.LOW)
+#            GPIO.output(12, GPIO.HIGH)
+#            sleep(1)
+#            GPIO.output(11, GPIO.HIGH)
+#            GPIO.output(12, GPIO.LOW)
+        GPIO.setup(24, GPIO.OUT)
+        GPIO.setup(25, GPIO.OUT)
+    
+    
+        GPIO.output(24, GPIO.HIGH)
+        GPIO.output(25, GPIO.HIGH)
+        sleep(0.1)
+        GPIO.output(24, GPIO.LOW)
+        GPIO.output(25, GPIO.LOW)
 
         return True
 
 def timeToTakeCoffee():
     return
 
+sendAudioLoop()
+
+#setup()
+#GPIO.setmode(GPIO.BCM)
+
+#makeCoffee()
+#GPIO.setup(24, GPIO.OUT)
+#GPIO.setup(25, GPIO.OUT)
+#
+#
+#GPIO.output(24, GPIO.HIGH)
+#GPIO.output(25, GPIO.HIGH)
+#sleep(0.1)
+#GPIO.output(24, GPIO.LOW)
+#GPIO.output(25, GPIO.LOW)
+GPIO.cleanup()
+#
 
 
-# makeCoffee()
+
 
 
 

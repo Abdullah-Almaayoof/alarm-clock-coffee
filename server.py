@@ -19,8 +19,24 @@ app = Flask('app')
 def test():
     return 'test'
 
+lastRun = 'False'
+runCount = 0
+
+@app.route('/getLastRun', methods=['GET'])
+def getLastRun():
+    global lastRun
+    return lastRun
+
+@app.route('/getRunCount', methods=['GET'])
+def getRunCount():
+    global runCount
+    return str(runCount)
+
+
 @app.route('/recieveAudio', methods=['GET', 'POST'])
 def upload():
+    global runCount
+    global lastRun
     if flaskRequest.method == 'POST':
         file = flaskRequest.files['file']
         if file:
@@ -33,14 +49,17 @@ def upload():
             #return send_from_directory('output', output_file)
             if alarm.checkAlarmSegment('stream.wav'):
                 print('returning True')
-                return 'True'
+                lastRun = 'True'
             else:
                 print('returning False')
-                return 'False'
+                lastRun = 'False'
         else:
-            return 'No file'
+            lastRun = 'No File'
+        runCount +=1
+        return ''
 
-    return 'Not Post'
+    lastRun = 'Not a Post Request'
+    return ''
 
 
 

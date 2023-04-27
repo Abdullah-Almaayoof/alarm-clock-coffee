@@ -48,7 +48,7 @@ file = 'alarm_mono_single.wav'
 filtered1 = soundFFT(file)
 
 def initAlarmCSV():
-  file = 'alarm_mono_single.wav'
+  file = 'alarm_mono_single_pi.wav'
   filtered1 = soundFFT(file)
 
   freqs = np.arange(0, 4000, 0.1)
@@ -72,7 +72,7 @@ def initAlarmCSV():
     indexFreq+=1
 
   merged_df.to_csv('alarm.csv', index=False)
-  
+
 def freqMagMSE(filtered2):
   # Matches up different size and index dataframes in one merged df
   # Takes input two dataframes with columns: 'freq' and 'magnitude
