@@ -44,11 +44,11 @@ def soundFFT(filename):
   plt.ylabel("Magnitude")
   return filtered_freq
 
-file = 'alarm_mono_single.wav'
-filtered1 = soundFFT(file)
+# file = 'alarm_mono_single.wav'
+# filtered1 = soundFFT(file)
 
 def initAlarmCSV():
-  file = 'alarm_mono_single_pi.wav'
+  file = 'alarm_mono_single_pi_10.wav'
   filtered1 = soundFFT(file)
 
   freqs = np.arange(0, 4000, 0.1)
@@ -73,11 +73,12 @@ def initAlarmCSV():
 
   merged_df.to_csv('alarm.csv', index=False)
 
+
 def freqMagMSE(filtered2):
   # Matches up different size and index dataframes in one merged df
   # Takes input two dataframes with columns: 'freq' and 'magnitude
   # Match the closest frequencies up to 4000, then add corresponding magnitudes
-  freqs = np.arange(0, 4000, 0.1)
+  freqs = np.arange(0, 4000, 1)
   merged_df = pd.read_csv('alarm.csv')
   merged_df['freq2'] = pd.Series()
   merged_df['mag2'] = pd.Series()
@@ -103,7 +104,7 @@ def checkAlarmSegment(filename):
   filtered = soundFFT(filename)
   mse = freqMagMSE(filtered)
   print(mse)
-  if mse > 1.5e-07:
+  if mse > 8e-10:
     return False
   else:
     return True
@@ -173,7 +174,7 @@ def makeCoffeeStream():
         sample_format = pyaudio.paInt16  # 16 bits per sample
         channels = 1
         fs = 44100  # Record at 44100 samples per second
-        seconds = 30
+        seconds = 10
         filename = "d2.wav"
         
         p = pyaudio.PyAudio()  # Create an interface to PortAudio

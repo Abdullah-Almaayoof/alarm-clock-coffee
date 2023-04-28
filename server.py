@@ -12,6 +12,8 @@ import numpy as np
 import os
 import alarm as alarm
 
+import warnings
+warnings.filterwarnings("ignore")
 
 app = Flask('app')
 
@@ -33,8 +35,8 @@ def getRunCount():
     return str(runCount)
 
 
-@app.route('/recieveAudio', methods=['GET', 'POST'])
-def upload():
+@app.route('/recieveAudio/<int:count>', methods=['GET', 'POST'])
+def upload(count):
     global runCount
     global lastRun
     if flaskRequest.method == 'POST':
@@ -48,8 +50,12 @@ def upload():
             
             #return send_from_directory('output', output_file)
             if alarm.checkAlarmSegment('stream.wav'):
-                print('returning True')
-                lastRun = 'True'
+                if count > 0:
+                    print('returning True')
+                    lastRun = 'True'
+                else:
+                    print('last run was true, not this one')
+                    lastRun = 'False'
             else:
                 print('returning False')
                 lastRun = 'False'
@@ -60,8 +66,6 @@ def upload():
 
     lastRun = 'Not a Post Request'
     return ''
-
-
 
 
 app.run(host='0.0.0.0', port=8080)

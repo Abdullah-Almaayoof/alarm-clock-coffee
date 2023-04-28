@@ -25,7 +25,7 @@ def recordAudio():
     sample_format = pyaudio.paInt16  # 16 bits per sample
     channels = 1
     fs = 44100  # Record at 44100 samples per second
-    seconds = 30
+    seconds = 10
     global count
     filename = "stream.wav"
 
@@ -177,7 +177,7 @@ def sendAudioLoop():
     global count
     lastResult = 'False'
     while run == False:
-        url = 'http://128.164.208.163:8080/recieveAudio'
+        url = 'http://128.164.208.163:8080/recieveAudio/'+str(count)
         file = {'file': open(r'stream.wav', 'rb')}
         try:
             requests.post(url, files=file, timeout=1)
