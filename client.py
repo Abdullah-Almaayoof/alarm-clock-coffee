@@ -17,6 +17,7 @@ import soundfile as sf
 import simpleaudio
 import pyaudio
 import requests
+from temp import *
 
 count = 0
 
@@ -144,6 +145,30 @@ def loop():
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+def revLoop():
+        global timeElapsed, T, D
+        
+        # writes the time elapsed and distance measured
+        # Turns LED to RED if object within 'threshold' distance
+        dist = distance()
+
+        print(timeElapsed, 's', dist, 'cm')
+        print('')
+
+        time.sleep(0.1)
+        timeElapsed = timeElapsed+0.1
+        
+        D = np.append(D, dist)
+        T = np.append(T, timeElapsed)
+        
+        global threshold
+        if(dist<threshold):
+            return False
+        else:
+            return True
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 
 
 # @app.route('/checkAlarm', methods=['POST'])
@@ -196,7 +221,6 @@ def sendAudioLoop():
         
     print('ALARM DETECTED')
     makeCoffee()
-    return
                 
 
 def makeCoffee():
@@ -204,7 +228,10 @@ def makeCoffee():
 
     setup()
     # First, check how long we should wait until making the coffee
+    avg_wait_time = get_average_wait_time()
+
     # Wait until set time
+    time.sleep(avg_wait_time)
 
     # Second, check ultrasound sensor for cup
     cup = loop()
@@ -213,18 +240,9 @@ def makeCoffee():
         return False
     else:
         print("\nCup available, will make coffee now\n")
-#        while timeElapsed <= 1:
-#            time.sleep(0.1)
-#            timeElapsed = timeElapsed+0.1
-#
-#            GPIO.output(11, GPIO.LOW)
-#            GPIO.output(12, GPIO.HIGH)
-#            sleep(1)
-#            GPIO.output(11, GPIO.HIGH)
-#            GPIO.output(12, GPIO.LOW)
+
         GPIO.setup(24, GPIO.OUT)
         GPIO.setup(25, GPIO.OUT)
-    
     
         GPIO.output(24, GPIO.HIGH)
         GPIO.output(25, GPIO.HIGH)
@@ -232,28 +250,69 @@ def makeCoffee():
         GPIO.output(24, GPIO.LOW)
         GPIO.output(25, GPIO.LOW)
 
+        timeToTakeCoffee()
+        sendTemp()
         return True
 
 def timeToTakeCoffee():
-    return
+    start_time = time.time()
+    while not revLoop():
+        pass
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    write_time_to_csv(elapsed_time)
+
+
+def write_time_to_csv(time_elapsed):
+    with open('coffee_time.csv', 'r') as f:
+        lines = f.readlines()
+        if len(lines) < 7:
+            lines.append(str(time_elapsed) + '\n')
+        else:
+            lines.pop(0)
+            lines.append(str(time_elapsed) + '\n')
+    with open('coffee_time.csv', 'w') as f:
+        f.writelines(lines)
+
+def get_average_wait_time():
+    with open('coffee_time.csv', 'r') as f:
+        lines = f.readlines()
+    times = [float(line.strip()) for line in lines]
+    avg_time = sum(times) / len(times)
+    return avg_time
+
+def sendTemp():
+    while not revLoop:
+        quality = checkTemp()
+        humidity, temperature = quality
+        coffeeTemp = estimate_coffee_temperature(temperature, humidity)
+        try:
+            url = 'https://dweet.io/dweet/for/csci3907coffeeTemp'
+            myobj = {'temperature': coffeeTemp}
+            x = requests.post(url, json = myobj)
+        
+            print(x.text)
+        except:
+            print("Waiting for connection")
+        
+        time.sleep(1)
+
+
+
+
+
+def estimate_coffee_temperature(temp, humidity):
+    # Calculate the dew point temperature
+    a = 17.27
+    b = 237.7
+    alpha = ((a * temp) / (b + temp)) + math.log(humidity/100.0)
+    dew_point = (b * alpha) / (a - alpha)
+    # Estimate the coffee temperature assuming the dew point temperature is the same as the coffee temperature
+    coffee_temp = (temp - dew_point) * 1.15 + dew_point
+    return coffee_temp
 
 sendAudioLoop()
-
-#setup()
-#GPIO.setmode(GPIO.BCM)
-
-#makeCoffee()
-#GPIO.setup(24, GPIO.OUT)
-#GPIO.setup(25, GPIO.OUT)
-#
-#
-#GPIO.output(24, GPIO.HIGH)
-#GPIO.output(25, GPIO.HIGH)
-#sleep(0.1)
-#GPIO.output(24, GPIO.LOW)
-#GPIO.output(25, GPIO.LOW)
 GPIO.cleanup()
-#
 
 
 
