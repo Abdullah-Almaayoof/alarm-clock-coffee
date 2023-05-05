@@ -19,6 +19,20 @@ import pyaudio
 import requests
 from temp import *
 
+import signal
+
+GPIO.setwarnings(False)
+
+class TimeoutException(Exception):   # Custom exception class
+    pass
+
+def timeout_handler(signum, frame):   # Custom signal handler
+    raise TimeoutException
+
+# Change the behavior of SIGALRM
+signal.signal(signal.SIGALRM, timeout_handler)
+
+
 count = 0
 
 def recordAudio():
@@ -76,7 +90,7 @@ GreenLED = 11 #Green LED
 # INTIALIZE VARIABLES =================================================
 
 timeElapsed = 0
-threshold = 25 # distance in centimeters
+threshold = 10 # distance in centimeters
 T = np.array([])
 D = np.array([])
 
@@ -101,13 +115,15 @@ def distance():
     time.sleep(0.00001)
     GPIO.output(TRIG, 0)
 
-    
+    time2 = 0
+    time1 = 0
     while GPIO.input(ECHO) == 0:
         time1 = time.time()
         
     while GPIO.input(ECHO) == 1:
         time2 = time.time()
-
+    if time2 == 0 or time2 == 0:
+        return -1
     during = time2 - time1
     return during * 340 / 2 * 100 #Returns distance in cm
 
@@ -123,9 +139,10 @@ def loop():
             # writes the time elapsed and distance measured
             # Turns LED to RED if object within 'threshold' distance
             dist = distance()
-
-            print(timeElapsed, 's', dist, 'cm')
-            print('')
+            if dist < 0:
+                print('-1')
+#            print(timeElapsed, 's', dist, 'cm')
+#            print('')
 
             time.sleep(0.1)
             timeElapsed = timeElapsed+0.1
@@ -152,8 +169,8 @@ def revLoop():
         # Turns LED to RED if object within 'threshold' distance
         dist = distance()
 
-        print(timeElapsed, 's', dist, 'cm')
-        print('')
+#        print(timeElapsed, 's', dist, '')
+#        print('')
 
         time.sleep(0.1)
         timeElapsed = timeElapsed+0.1
@@ -202,15 +219,15 @@ def sendAudioLoop():
     global count
     lastResult = 'False'
     while run == False:
-        url = 'http://128.164.208.163:8080/recieveAudio/'+str(count)
+        url = 'http://192.168.1.153:8080/recieveAudio/'+str(1+count)
         file = {'file': open(r'stream.wav', 'rb')}
         try:
             requests.post(url, files=file, timeout=1)
         except:
-            url = 'http://128.164.208.163:8080/getRunCount'
+            url = 'http://192.168.1.153:8080/getRunCount'
             currentCount = requests.get(url).content
             print(currentCount.decode('UTF-8'))
-            url = 'http://128.164.208.163:8080/getLastRun'
+            url = 'http://192.168.1.153:8080/getLastRun'
             lastResult = requests.get(url).content
             print(lastResult.decode('UTF-8'))
             if 'True' in lastResult.decode('UTF-8'):
@@ -225,11 +242,11 @@ def sendAudioLoop():
 
 def makeCoffee():
     global timeElapsed, T, D
-
+    
     setup()
     # First, check how long we should wait until making the coffee
     avg_wait_time = get_average_wait_time()
-
+    print('waitng '+str(avg_wait_time)+' seconds')
     # Wait until set time
     time.sleep(avg_wait_time)
 
@@ -239,20 +256,41 @@ def makeCoffee():
         print("\nCup not available\n")
         return False
     else:
+        print('---------------------------------------')
         print("\nCup available, will make coffee now\n")
+        print('---------------------------------------')
 
+        start_time = time.time()
         GPIO.setup(24, GPIO.OUT)
         GPIO.setup(25, GPIO.OUT)
-    
-        GPIO.output(24, GPIO.HIGH)
-        GPIO.output(25, GPIO.HIGH)
-        sleep(0.1)
-        GPIO.output(24, GPIO.LOW)
-        GPIO.output(25, GPIO.LOW)
+        for i in range(3):
+            GPIO.output(24, GPIO.HIGH)
+            GPIO.output(25, GPIO.HIGH)
+            sleep(1)
+            GPIO.output(24, GPIO.LOW)
+            GPIO.output(25, GPIO.LOW)
 
-        timeToTakeCoffee()
+        seconds = 0
+        while not revLoop() and seconds < 30:
+            sleep(1)
+            seconds+=1
+        if not loop():
+            end_time = time.time()
+            elapsed_time = end_time - start_time
+            print('time elapsed: '+str(elapsed_time)+'s')
+            write_time_to_csv(elapsed_time)
+            return True
+            
+        print('sending data to dweet.io')
         sendTemp()
+
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        print('time elapsed: '+str(elapsed_time)+'s')
+        write_time_to_csv(elapsed_time)
+            
         return True
+
 
 def timeToTakeCoffee():
     start_time = time.time()
@@ -260,6 +298,8 @@ def timeToTakeCoffee():
         pass
     end_time = time.time()
     elapsed_time = end_time - start_time
+    if elapsed_time > 60*10:
+        elapsed_time = 60*10
     write_time_to_csv(elapsed_time)
 
 
@@ -275,27 +315,41 @@ def write_time_to_csv(time_elapsed):
         f.writelines(lines)
 
 def get_average_wait_time():
-    with open('coffee_time.csv', 'r') as f:
-        lines = f.readlines()
-    times = [float(line.strip()) for line in lines]
-    avg_time = sum(times) / len(times)
-    return avg_time
+    try:
+        with open('coffee_time.csv', 'r') as f:
+            lines = f.readlines()
+        times = [float(line.strip()) for line in lines]
+        avg_time = sum(times) / len(times)
+        return avg_time
+    except:
+        return 0
+        
 
 def sendTemp():
-    while not revLoop:
-        quality = checkTemp()
-        humidity, temperature = quality
-        coffeeTemp = estimate_coffee_temperature(temperature, humidity)
+    print('sending temp while mug is there')
+    while not revLoop():
+        signal.alarm(1)
         try:
-            url = 'https://dweet.io/dweet/for/csci3907coffeeTemp'
-            myobj = {'temperature': coffeeTemp}
-            x = requests.post(url, json = myobj)
-        
-            print(x.text)
-        except:
-            print("Waiting for connection")
-        
-        time.sleep(1)
+            quality = checkTemp()
+        except TimeoutException:
+            print('temperature timeout')
+            continue 
+        else:
+            signal.alarm(0)
+
+        if quality != False:
+            humidity, temperature = quality
+            coffeeTemp = estimate_coffee_temperature(temperature, humidity)
+            try:
+                url = 'https://dweet.io/dweet/for/csci3907coffeeTemp'
+                myobj = {'temperature': coffeeTemp}
+                x = requests.post(url, json = myobj, timeout = 1)
+            
+                print(x.text)
+            except:
+                print("Waiting for connection")
+            
+            time.sleep(1)
 
 
 
@@ -311,7 +365,18 @@ def estimate_coffee_temperature(temp, humidity):
     coffee_temp = (temp - dew_point) * 1.15 + dew_point
     return coffee_temp
 
-sendAudioLoop()
+GPIO.cleanup()
+
+#sendAudioLoop()
+#quality = False
+#while quality == False:
+#    quality = checkTemp()
+#humidity, temperature = quality
+#dew = temperature-((100-humidity)/5)
+#print(dew)
+sleep(5)
+makeCoffee()
+
 GPIO.cleanup()
 
 
